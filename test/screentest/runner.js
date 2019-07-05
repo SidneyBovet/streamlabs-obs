@@ -54,8 +54,13 @@ function checkoutBranch(branchName) {
   const branchPath = `${CONFIG.dist}/${branchName}`;
   if (!fs.existsSync(branchPath)) fs.mkdirSync(branchPath);
   const checkoutTarget = branchName === 'current' ? commitSHA : branchName;
-  exec(`git checkout ${checkoutTarget}`);
   rimraf.sync(CONFIG.compiledTestsDist);
+  exec(`git reset --hard`);
+  exec(`git checkout ${checkoutTarget}`);
+  if (branchName !== CONFIG.baseBranch) {
+    // the base branch may have changes, so merge it
+    exec(`git pull origin ${CONFIG.baseBranch}`);
+  }
   exec('yarn install --frozen-lockfile --check-files');
   exec('yarn compile:ci');
   // save current branch name to the file
@@ -114,7 +119,7 @@ async function updateCheck() {
     await github.postCheck({
       name: 'Screenshots',
       head_sha: commitSHA,
-      conclusion,
+      conclusion: 'success',
       completed_at: new Date().toISOString(),
       details_url: screenshotsUrl || 'https://github.com/stream-labs/streamlabs-obs',
       output: {

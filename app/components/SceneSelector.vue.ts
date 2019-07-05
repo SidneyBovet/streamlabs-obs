@@ -1,7 +1,6 @@
 import Vue from 'vue';
 import { Component } from 'vue-property-decorator';
 import { Inject } from '../services/core/injector';
-import Selector from './Selector.vue';
 import { ScenesService } from 'services/scenes';
 import { Menu } from '../util/menus/Menu';
 import { TransitionsService } from 'services/transitions';
@@ -17,9 +16,10 @@ import { $t } from 'services/i18n';
 import electron from 'electron';
 import { EditorCommandsService } from 'services/editor-commands';
 import * as obs from '../../obs-api';
+import SlVueTree, { ISlTreeNode } from 'sl-vue-tree';
 
 @Component({
-  components: { Selector, DropdownMenu, HelpTip },
+  components: { DropdownMenu, HelpTip, SlVueTree },
 })
 export default class SceneSelector extends Vue {
   @Inject() scenesService: ScenesService;
@@ -35,6 +35,17 @@ export default class SceneSelector extends Vue {
   addSceneTooltip = $t('Add a new Scene.');
   removeSceneTooltip = $t('Remove Scene.');
   showTransitionsTooltip = $t('Edit Scene Transitions.');
+
+  get scenes() {
+    return this.scenesService.scenes.map(scene => {
+      return {
+        title: scene.name,
+        isLeaf: true,
+        isSelected: scene.id === this.scenesService.activeSceneId,
+        data: { id: scene.id },
+      };
+    });
+  }
 
   showContextMenu() {
     const menu = new Menu();
@@ -65,12 +76,12 @@ export default class SceneSelector extends Vue {
     menu.popup();
   }
 
-  makeActive(id: string) {
-    this.scenesService.makeSceneActive(id);
+  makeActive(selectedNodes: ISlTreeNode<{ id: string }>[]) {
+    this.scenesService.makeSceneActive(selectedNodes[0].data.id);
   }
 
-  handleSort(data: any) {
-    this.scenesService.setSceneOrder(data.order);
+  handleSort(nodes: ISlTreeNode<{ id: string }>[]) {
+    this.scenesService.setSceneOrder(nodes.map(node => node.data.id));
   }
 
   addScene() {
@@ -103,15 +114,6 @@ export default class SceneSelector extends Vue {
 
   showTransitions() {
     this.transitionsService.showSceneTransitions();
-  }
-
-  get scenes() {
-    return this.scenesService.scenes.map(scene => {
-      return {
-        name: scene.name,
-        value: scene.id,
-      };
-    });
   }
 
   get sceneCollections() {
